@@ -1,13 +1,35 @@
-import 'dotenv/config';
+import 'dotenv/config'
+import express from 'express'
+import { ApolloServer, gql } from 'apollo-server-express'
 
-const userCredentials = { firstname: 'Robin' };
-const userDetails = { nationality: 'German' };
+const app = express()
 
-const user = {
-  ...userCredentials,
-  ...userDetails,
-};
+const schema = gql`
+  type Query {
+    me: User
+  }
 
-console.log(user);
+  type User {
+    username: String!
+  }
+`
 
-console.log(process.env.SOME_ENV_VARIABLE);
+const resolvers = {
+  Query: {
+    me: () => {
+      return {
+        username: 'Robin Wieruch',
+      }
+    },
+  },
+}
+const server = new ApolloServer({
+  typeDefs: schema,
+  resolvers,
+})
+
+server.applyMiddleware({ app, path: '/graphql' })
+
+app.listen({ port: 8000 }, () => {
+  console.log('Apollo Server on http://localhost:8000/graphql')
+})
