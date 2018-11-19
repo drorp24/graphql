@@ -5,6 +5,11 @@ import schema from './schema'
 import resolvers from './resolvers'
 import models from './models'
 
+import connect from './mongoDB/connect'
+connect().catch(error =>
+  console.error('🤢 mongoDB connection error:', error.errmsg),
+)
+
 const server = new ApolloServer({
   typeDefs: schema,
   resolvers,
