@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import { anyIsMissingFrom, specified } from './utility'
 
 const quotationSchema = new mongoose.Schema({
   _id: mongoose.Schema.Types.ObjectId,
@@ -34,26 +35,56 @@ merchantSchema.virtual('delivers').get(function() {
   return this.delivery
 })
 
-// instance method
-merchantSchema.methods.rate = function(currency) {
+// instance methods
+
+// methods that are used by other methods and are not exposed to resolvers
+// return Promise.reject if they err, to bubble their error to the calling methods
+merchantSchema.methods.quotation = function(currency) {
   //this.quotations.filter(item => item.currency === 'USD')[0].buy
-  const { quotations, name } = this
+  const { quotations } = this
 
-  if (!quotations) return console.log(`${name} has no quotations`)
-  const rate_record = quotations.filter(item => item.currency === currency)
-  if (!rate_record[0])
-    return console.log(`No rate defined for currency ${currency}`)
+  if (!quotations) return Promise.reject('merchant: no quotations at all')
+  const quotation = quotations.filter(item => item.currency === currency).pop()
+  if (!quotation)
+    return Promise.reject(`merchant: No quotations for currency ${currency}`)
 
-  return rate_record[0]
+  return Promise.resolve(quotation)
+}
+
+merchantSchema.methods.updateQuotation = async function(newQuotation) {
+  const { currency, buy, sell } = newQuotation
+  if (!currency || (!buy && !sell)) return Promise.reject('args: missing')
+
+  const { quotations } = this
+  if (!quotations) return Promise.reject('merchant: no quotations at all')
+
+  const curQuotation = quotations
+    .filter(item => item.currency === currency)
+    .pop()
+
+  if (!curQuotation)
+    return Promise.reject(`merchant: No quotations for currency ${currency}`)
+
+  if (buy) curQuotation.buy = buy
+  if (sell) curQuotation.buy = sell
+
+  await this.save()
+
+  return Promise.resolve(curQuotation)
 }
 
 // static methods
 merchantSchema.statics.deliver = function() {
-  return this.find({ delivery: true }, 'delivery_charge')
+  return this.find({ delivery: true })
 }
 
-merchantSchema.statics.findNearest = function(args) {
-  const { lat, lng, maxDistance, maxResults } = args
+merchantSchema.statics.search = function(args) {
+  // for this method, arg missing is caught by apollo before even reaching this code
+  // in the mutation, on the other hand, my args missing does catch
+  if (anyIsMissingFrom(args, ['lat', 'lng', 'distance', 'currency']))
+    return { error: 'args: missing' }
+
+  const { lat, lng, distance, delivery, currency, results } = args
 
   let query = this.find({
     location: {
@@ -62,19 +93,75 @@ merchantSchema.statics.findNearest = function(args) {
           type: 'Point',
           coordinates: [lng, lat],
         },
-        $maxDistance: maxDistance * 1000,
+        $maxDistance: distance * 1000,
       },
     },
-  })
+  }).selling(currency)
 
-  if (maxResults) query = query.limit(maxResults)
+  // delivery is optional & boolean, hence 'if (delivery)' will not do when delivery is specified and false
+  if (specified(delivery)) query = query.where({ delivery: delivery })
+
+  // results is optional but not boolean, so 'if (results)' is good enough
+  if (results) query = query.limit(results)
 
   return query
+}
+
+merchantSchema.statics.byName = function(args) {
+  if (anyIsMissingFrom(args, ['name'])) return Promise.reject('args: missing')
+
+  const { name, results } = args
+  let query = this.find({ name: new RegExp(name, 'i') })
+  if (results) query = query.limit(results)
+
+  return query
+}
+
+// methods which *are* exposed to the resolvers should *not* return Promises.
+// Whether they succeed or fail, they should return a plain obj (not a promise).
+merchantSchema.statics.updateQuotationByName = async function(args) {
+  let { name, quotation } = args
+  if (anyIsMissingFrom(args, ['name', 'quotation']))
+    return {
+      success: false,
+      message: 'args: missing',
+      quotation,
+    }
+
+  let merchant = await this.byName({ name: name, results: 1 })
+  if (!merchant.length)
+    return {
+      success: false,
+      message: 'merchant: no such name',
+      quotation,
+    }
+
+  merchant = merchant[0]
+
+  try {
+    quotation = await merchant.updateQuotation(quotation)
+  } catch (error) {
+    return {
+      success: false,
+      message: error,
+      quotation,
+    }
+  }
+
+  return {
+    success: true,
+    message: 'ok',
+    quotation,
+  }
 }
 
 // query helpers
 merchantSchema.query.charging = function() {
   return this.where('delivery_charge').ne(null)
+}
+
+merchantSchema.query.selling = function(currency) {
+  return this.where({ 'quotations.currency': currency })
 }
 
 export default mongoose.model('Merchant', merchantSchema)
