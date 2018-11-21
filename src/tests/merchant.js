@@ -1,6 +1,7 @@
 import Merchant from '../models/merchant'
 
 export default async function test() {
+  /*
   let ami = await Merchant.byName({ name: 'ami', results: 1 })
   ami = ami.pop()
 
@@ -8,7 +9,7 @@ export default async function test() {
     .updateQuotation({ currency: 'USD', buy: 0.5 })
     .then(res => console.log('\n ami.updateQuotations returned: \n', res))
     .catch(e => console.log('updateQuotation error: ', e))
-
+  */
   /*
   console.log('\n', cashCash, '\n')
   console.log('\n', cashCash.delivers, '\n')
@@ -24,7 +25,6 @@ export default async function test() {
     '\n',
   )
   */
-
   /*
   console.log('\ndelivery merchants:\n', await Merchant.deliver())
   console.log(

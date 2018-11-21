@@ -1,7 +1,7 @@
-// Each of the model methods can respond to its called in either of 3 ways:
-// - returning result / error (or: Promise.reject/resolve if async) - when called from other methods
+// Each of the model methods can respond to its caller in either of 3 ways:
+// - returning string result / error (or: Promise.reject/resolve if async) - when called from other methods
 // - returning a mongoose query, which is a promise (Apollo will await it to resolve) - when called from resolvers
-// - returning a simple obj (in the schema declared format) with error or success - if no async query is passed
+// - returning a simple obj in the schema declared format, with error or success - if no async query is passed
 
 import mongoose from 'mongoose'
 import { anyIsMissingFrom, specified } from './utility'
