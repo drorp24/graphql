@@ -17,6 +17,10 @@ export default gql`
     ): UpdateQuotationResponse
   }
 
+  type Subscription {
+    quotationUpdated: Quotation
+  }
+
   type Merchant {
     id: ID!
     place_id: String

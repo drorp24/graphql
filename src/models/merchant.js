@@ -1,3 +1,8 @@
+// Each of the model methods can respond to its called in either of 3 ways:
+// - returning result / error (or: Promise.reject/resolve if async) - when called from other methods
+// - returning a mongoose query, which is a promise (Apollo will await it to resolve) - when called from resolvers
+// - returning a simple obj (in the schema declared format) with error or success - if no async query is passed
+
 import mongoose from 'mongoose'
 import { anyIsMissingFrom, specified } from './utility'
 
@@ -37,15 +42,13 @@ merchantSchema.virtual('delivers').get(function() {
 
 // instance methods
 
-// methods that are used by other methods and are not exposed to resolvers
-// return Promise.reject if they err, to bubble their error to the calling methods
 merchantSchema.methods.quotation = function(currency) {
-  //this.quotations.filter(item => item.currency === 'USD')[0].buy
   const { quotations } = this
 
   if (!quotations) return Promise.reject('merchant: no quotations at all')
   const quotation = quotations.filter(item => item.currency === currency).pop()
   if (!quotation)
+    // a simple error would actually be enough, as there's nothing async in this method
     return Promise.reject(`merchant: No quotations for currency ${currency}`)
 
   return Promise.resolve(quotation)
@@ -82,7 +85,7 @@ merchantSchema.statics.search = function(args) {
   // for this method, arg missing is caught by apollo before even reaching this code
   // in the mutation, on the other hand, my args missing does catch
   if (anyIsMissingFrom(args, ['lat', 'lng', 'distance', 'currency']))
-    return { error: 'args: missing' }
+    return Promise.resolve('args: missing')
 
   const { lat, lng, distance, delivery, currency, results } = args
 
@@ -117,8 +120,6 @@ merchantSchema.statics.byName = function(args) {
   return query
 }
 
-// methods which *are* exposed to the resolvers should *not* return Promises.
-// Whether they succeed or fail, they should return a plain obj (not a promise).
 merchantSchema.statics.updateQuotationByName = async function(args) {
   let { name, quotation } = args
   if (anyIsMissingFrom(args, ['name', 'quotation']))
