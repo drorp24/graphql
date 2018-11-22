@@ -1,13 +1,14 @@
 import 'dotenv/config'
 import { ApolloServer } from 'apollo-server'
 
-import schema from './schema/merchant'
-import resolvers from './resolvers/merchant'
+import schema from './schema/trading'
+import resolvers from './resolvers/trading'
 import models from './models'
 import Merchant from './models/merchant'
 
 import connect from './mongoDB/connect'
 import test from './tests/merchant'
+import { startPolling } from './models/trading'
 
 connect().catch(error =>
   console.error('🤢 mongoDB connection error:', error.errmsg),
@@ -17,9 +18,12 @@ connect().catch(error =>
 const mmodels = { Merchant }
 const server = new ApolloServer({
   typeDefs: schema,
+
   resolvers,
+
   context: async ({ req, connection }) => {
     let ctx = { mmodels }
+
     if (connection) {
       // console.log('\n connection.context: \n')
       // console.log(connection.conext)
@@ -29,13 +33,25 @@ const server = new ApolloServer({
       // console.log(req.headers)
       Object.assign(ctx, { token: req.headers.authorization || '' })
     }
+
     return ctx
   },
+
   subscriptions: {
     onConnect: (connectionParams, webSocket, context) => {
       // console.log('connectionParams:')
       // console.log(connectionParams)
     },
+  },
+
+  formatError: error => {
+    console.log(error)
+    return error
+  },
+
+  formatResponse: response => {
+    console.log(response)
+    return response
   },
 })
 
@@ -43,4 +59,5 @@ server.listen().then(({ url }) => {
   console.log(`🚀 Server ready at ${url}`)
 })
 
-test()
+// test()
+startPolling({ coins: ['BTC', 'ETH'], currencies: ['USD', 'EUR'], int: 3000 })

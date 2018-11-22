@@ -5,8 +5,9 @@
 
 import mongoose from 'mongoose'
 import { anyIsMissingFrom, specified } from './utility'
+import { currencySchema } from './common'
 
-const quotationSchema = new mongoose.Schema({
+export const quotationSchema = new mongoose.Schema({
   _id: mongoose.Schema.Types.ObjectId,
   currency: { type: String, required: true },
   buy: Number,
@@ -30,7 +31,7 @@ const merchantSchema = new mongoose.Schema({
   phone: String,
   delivery: Boolean,
   delivery_charge: Number,
-  currency: { type: String, required: true },
+  currency: { type: currencySchema, required: true },
   location: { type: pointSchema, required: true },
   quotations: [quotationSchema],
 })

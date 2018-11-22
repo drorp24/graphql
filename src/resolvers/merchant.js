@@ -1,10 +1,8 @@
 // Enables changing the structure of the args objects exposed to the client w/o
 // having to change the model's methods
 import { flatten } from '../models/utility'
-const { PubSub } = require('apollo-server')
-
-const pubsub = new PubSub()
-const QUOTATION_UPDATED = 'QUOTATION_UPDATED'
+import pubsub from '../subscriptions/pubsub'
+import { QUOTATION_UPDATED } from '../subscriptions/events'
 
 export default {
   Subscription: {
@@ -14,12 +12,10 @@ export default {
     },
   },
   Query: {
-    merchants: (parent, args, { mmodels }) => {
-      return mmodels.Merchant.search(flatten(args))
-    },
-    merchantsByName: (parent, args, { mmodels }) => {
-      return mmodels.Merchant.byName(flatten(args))
-    },
+    merchants: (parent, args, { mmodels }) =>
+      mmodels.Merchant.search(flatten(args)),
+    merchantsByName: (parent, args, { mmodels }) =>
+      mmodels.Merchant.byName(flatten(args)),
   },
 
   MutationResponse: {

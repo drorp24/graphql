@@ -19,6 +19,7 @@ export default gql`
 
   type Subscription {
     quotationUpdated: Quotation
+    rateUpdated: Quotation
   }
 
   type Merchant {
