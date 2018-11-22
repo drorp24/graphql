@@ -1,9 +1,13 @@
 import 'dotenv/config'
 import { ApolloServer } from 'apollo-server'
+import merge from 'lodash.merge'
+// import { mergeSchemas } from 'graphql-tools'
 
-import schema from './schema/trading'
-import resolvers from './resolvers/trading'
-import models from './models'
+// import merchantSchema from './schema/merchant'
+// import tradingSchema from './schema/trading'
+import manuallyStitchedSchema from './schema/index'
+import merchantResolvers from './resolvers/merchant'
+import tradingResolvers from './resolvers/trading'
 import Merchant from './models/merchant'
 
 import connect from './mongoDB/connect'
@@ -16,10 +20,12 @@ connect().catch(error =>
 
 // will be merged into models, so every <model> is accessible as models.<model>
 const mmodels = { Merchant }
+// const unifiedSchema = mergeSchemas({ schemas: [tradingSchema, merchantSchema] })
+const unifiedResolvers = merge(merchantResolvers, tradingResolvers)
 const server = new ApolloServer({
-  typeDefs: schema,
+  typeDefs: manuallyStitchedSchema,
 
-  resolvers,
+  resolvers: unifiedResolvers,
 
   context: async ({ req, connection }) => {
     let ctx = { mmodels }
@@ -59,5 +65,5 @@ server.listen().then(({ url }) => {
   console.log(`🚀 Server ready at ${url}`)
 })
 
-// test()
+test()
 startPolling({ coins: ['BTC', 'ETH'], currencies: ['USD', 'EUR'], int: 3000 })
