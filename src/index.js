@@ -10,7 +10,7 @@ import merchantResolvers from './resolvers/merchant'
 import tradingResolvers from './resolvers/trading'
 import Merchant from './models/merchant'
 
-import connect from './mongoDB/connect'
+import connect from './connections/mlab'
 import test from './tests/merchant'
 import { startPolling } from './models/trading'
 
@@ -66,4 +66,4 @@ server.listen().then(({ url }) => {
 })
 
 test()
-startPolling({ coins: ['BTC', 'ETH'], currencies: ['USD', 'EUR'], int: 3000 })
+startPolling({ coins: ['BTC', 'ETH'], currencies: ['USD', 'EUR'], int: 1000 })
