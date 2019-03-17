@@ -14,9 +14,7 @@ import connect from './connections/mlab'
 import test from './tests/merchant'
 import { startPolling } from './models/trading'
 
-connect().catch(error =>
-  console.error('🤢 mongoDB connection error:', error.errmsg),
-)
+connect().catch(error => console.error('🤢 mongoDB connection error:', error))
 
 // will be merged into models, so every <model> is accessible as models.<model>
 const mmodels = { Merchant }
@@ -32,7 +30,7 @@ const server = new ApolloServer({
 
     if (connection) {
       // console.log('\n connection.context: \n')
-      // console.log(connection.conext)
+      // console.log(connection.context)
       Object.assign(ctx, { connection: connection.context })
     } else {
       // console.log('\n req.headers: \n')
@@ -51,12 +49,12 @@ const server = new ApolloServer({
   },
 
   formatError: error => {
-    console.log(error)
+    console.log(error.message)
     return error
   },
 
   formatResponse: response => {
-    console.log(response)
+    // console.log(response)
     return response
   },
 })
@@ -65,5 +63,5 @@ server.listen().then(({ url }) => {
   console.log(`🚀 Server ready at ${url}`)
 })
 
-test()
-startPolling({ coins: ['BTC', 'ETH'], currencies: ['USD', 'EUR'], int: 1000 })
+// test()
+// startPolling({ coins: ['BTC', 'ETH'], currencies: ['USD', 'EUR'], int: 1000 })

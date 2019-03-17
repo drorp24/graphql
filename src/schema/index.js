@@ -5,11 +5,12 @@ import { gql } from 'apollo-server'
 export default gql`
   type Query {
     merchants(
-      searchArea: SearchArea!
-      merchantServices: MerchantServices!
-      searchResults: SearchResults!
+      area: Area!
+      currency: String!
+      services: Services!
+      results: Results
     ): [Merchant!]
-    merchantsByName(name: String!, searchResults: SearchResults!): [Merchant!]
+    merchantsByName(name: String!, results: Results!): [Merchant!]
     trading(
       "Coins whose prices you want to know"
       coins: [String!]!
@@ -45,6 +46,8 @@ export default gql`
     currency: String
     quotations: [Quotation]
     location: Location
+    quotation(currency: String!): Quotation
+    quote(currency: String!, amount: Float!): Float
   }
 
   type Quotation {
@@ -81,7 +84,7 @@ export default gql`
     quotation: Quotation!
   }
 
-  input SearchArea {
+  input Area {
     "Search area center latitude"
     lat: Float!
     "Search area center longitude"
@@ -90,16 +93,14 @@ export default gql`
     distance: Float!
   }
 
-  input MerchantServices {
+  input Services {
     "Supports delivery"
     delivery: Boolean
-    "Sells currency"
-    currency: String
   }
 
-  input SearchResults {
+  input Results {
     "Maximum results to fetch"
-    results: Float
+    count: Float
   }
 
   type Trading {

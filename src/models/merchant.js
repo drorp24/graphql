@@ -4,24 +4,25 @@
 // - returning a simple obj in the schema declared format, with error or success - if no async query is passed
 
 import mongoose from 'mongoose'
-import { anyIsMissingFrom, specified } from './utility'
 import { currencySchema } from './common'
+import { specified } from '../resolvers/utility'
 
+// TODO: remove _id declarations
 export const quotationSchema = new mongoose.Schema({
-  _id: mongoose.Schema.Types.ObjectId,
+  // _id: mssongoose.Schema.Types.ObjectId,
   currency: { type: String, required: true },
   buy: Number,
   sell: Number,
 })
 
 const pointSchema = new mongoose.Schema({
-  _id: mongoose.Schema.Types.ObjectId,
+  // _id: mongoose.Schema.Types.ObjectId,
   type: { type: String, required: true, enum: ['Point'], default: 'Point' },
   coordinates: { type: [Number], required: true },
 })
 
 const merchantSchema = new mongoose.Schema({
-  _id: mongoose.Schema.Types.ObjectId,
+  // _id: mongoose.Schema.Types.ObjectId,
   place_id: String,
   name: { type: String, required: true },
   name_he: String,
@@ -43,7 +44,11 @@ merchantSchema.virtual('delivers').get(function() {
 
 // instance methods
 
-merchantSchema.methods.quotation = function(currency) {
+// GraphQL looks for:
+// - function in the resolver
+// - instance method in the model, like here (implemented by mongoose)
+// - key in the object model (populated by mongoose with the DB value)
+merchantSchema.methods.quotation = function({ currency }) {
   const { quotations } = this
 
   if (!quotations) return Promise.reject('merchant: no quotations at all')
@@ -53,6 +58,16 @@ merchantSchema.methods.quotation = function(currency) {
     return Promise.reject(`merchant: No quotations for currency ${currency}`)
 
   return Promise.resolve(quotation)
+}
+
+merchantSchema.methods.quote = async function({ currency, amount }) {
+  try {
+    const quotation = await this.quotation({ currency })
+    const result = quotation.buy * amount
+    return result
+  } catch (error) {
+    return Promise.reject(error)
+  }
 }
 
 merchantSchema.methods.updateQuotation = async function(newQuotation) {
@@ -70,7 +85,7 @@ merchantSchema.methods.updateQuotation = async function(newQuotation) {
     return Promise.reject(`merchant: No quotations for currency ${currency}`)
 
   if (buy) curQuotation.buy = buy
-  if (sell) curQuotation.buy = sell
+  if (sell) curQuotation.sell = sell
 
   await this.save()
 
@@ -83,13 +98,9 @@ merchantSchema.statics.deliver = function() {
 }
 
 merchantSchema.statics.search = function(args) {
-  // for this method, arg missing is caught by apollo before even reaching this code
-  // in the mutation, on the other hand, my args missing does catch
-  if (anyIsMissingFrom(args, ['lat', 'lng', 'distance', 'currency']))
-    return Promise.resolve('args: missing')
+  const { lat, lng, distance, delivery, currency, count } = args
 
-  const { lat, lng, distance, delivery, currency, results } = args
-
+  // Not adding 'exec' or 'await' makes 'query' chainable (.selling, .where, .limit)
   let query = this.find({
     location: {
       $nearSphere: {
@@ -102,18 +113,15 @@ merchantSchema.statics.search = function(args) {
     },
   }).selling(currency)
 
-  // delivery is optional & boolean, hence 'if (delivery)' will not do when delivery is specified and false
-  if (specified(delivery)) query = query.where({ delivery: delivery })
+  // if (delivery)' alone could either mean: don't care, or alternatively: look for those that do not support delivery
+  if (specified(delivery)) query = query.where({ delivery })
 
-  // results is optional but not boolean, so 'if (results)' is good enough
-  if (results) query = query.limit(results)
+  if (specified(count)) query = query.limit(count)
 
   return query
 }
 
 merchantSchema.statics.byName = function(args) {
-  if (anyIsMissingFrom(args, ['name'])) return Promise.reject('args: missing')
-
   const { name, results } = args
   let query = this.find({ name: new RegExp(name, 'i') })
   if (results) query = query.limit(results)
@@ -123,13 +131,6 @@ merchantSchema.statics.byName = function(args) {
 
 merchantSchema.statics.updateQuotationByName = async function(args) {
   let { name, quotation } = args
-  if (anyIsMissingFrom(args, ['name', 'quotation']))
-    return {
-      success: false,
-      message: 'args: missing',
-      quotation,
-    }
-
   let merchant = await this.byName({ name: name, results: 1 })
   if (!merchant.length)
     return {
