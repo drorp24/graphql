@@ -3,6 +3,7 @@ import interval from 'interval-promise'
 
 import pubsub from '../subscriptions/pubsub'
 import { TRADING_UPDATED } from '../subscriptions/events'
+import moize from 'moize'
 
 // UPDATE: eventually not used: couldn't produce the right object, plus validation threw inspite of the catch
 // mongoose used here solely for its schema, as nothing is read or persisted to/from DB
@@ -70,3 +71,30 @@ export const startPolling = args => {
     await poll()
   }, int)
 }
+
+export const nonMemoizedInterbank = async ({ base, quote }) => {
+  try {
+    const url = `https://min-api.cryptocompare.com/data/price?fsym=${base}&tsyms=${quote}&api_key=${
+      process.env.CRYPTO_COMPARE_PASSWORD
+    }`
+    const response = await axios.get(url)
+    const data = response.data
+    return data[quote]
+  } catch (error) {
+    console.log('error in rate: ', error)
+  }
+}
+
+moize.collectStats()
+
+// moize wouldn't cache properly without the 'equals' part! though 'base' & 'quote' are the only arguments!
+export const interbank = moize({
+  maxAge: 300000,
+  profileName: 'interbank',
+  equals(cacheKeyArgument, keyArgument) {
+    return (
+      cacheKeyArgument.base === keyArgument.base &&
+      cacheKeyArgument.quote === keyArgument.quote
+    )
+  },
+})(nonMemoizedInterbank)

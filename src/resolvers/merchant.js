@@ -3,8 +3,11 @@
 import { flatten } from './utility'
 import pubsub from '../subscriptions/pubsub'
 import { QUOTATION_UPDATED } from '../subscriptions/events'
+// import { UserInputError } from 'apollo-server'
+// import { anyIsMissingFrom } from './utility'
+import { GraphQLScalarType } from 'graphql'
+import { Kind } from 'graphql/language'
 import { UserInputError } from 'apollo-server'
-import { anyIsMissingFrom } from './utility'
 
 export default {
   Subscription: {
@@ -14,18 +17,19 @@ export default {
     },
   },
   Query: {
-    merchants: (parent, args, { mmodels }) =>
+    merchants: (parent, args, { mmodels }) => {
       // Input / authentication / etc should be checked / thrown here rather than in the (mongoose) implementation
-      // This is an example of throwing a built-in Apollo error
-      // Not a good one though, as query structure incl. which arg is mandatory are defined by the query
-      // which graphQl checks and returns an array with errors
-      //
-      // if (anyIsMissingFrom(args, ['currency', 'lat', 'lng'])) {
-      // throw new UserInputError('Arguments  invalid', {
-      //   invalidArgs: Object.keys(args),
-      // })
-      // }
-      mmodels.Merchant.search(flatten(args)),
+      // This allows to output a custom error, but won't interfere with succesful resolvers to reach clients (or so documentation promises)
+      const { lat, lng } = args
+      const validationErrors = {}
+      if (!lat || !lng) {
+        // validationErrors.location = 'Missing'
+      }
+      if (Object.keys(validationErrors).length > 0) {
+        throw new UserInputError('No location provided', { validationErrors })
+      }
+      return mmodels.Merchant.search(flatten(args))
+    },
     merchantsByName: (parent, args, { mmodels }) =>
       mmodels.Merchant.byName(flatten(args)),
   },
@@ -54,4 +58,22 @@ export default {
       return mmodels.Merchant.updateQuotationByName({ name, quotation })
     },
   },
+
+  Date: new GraphQLScalarType({
+    name: 'Date',
+    description: 'Date custom scalar type',
+    parseValue(value) {
+      return new Date(value) // value from the client
+    },
+    serialize(value) {
+      // return value.getTime() // value sent to the client
+      return new Date(value)
+    },
+    parseLiteral(ast) {
+      if (ast.kind === Kind.INT) {
+        return new Date(ast.value) // ast value is always in string format
+      }
+      return null
+    },
+  }),
 }

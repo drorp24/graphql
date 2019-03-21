@@ -1,3 +1,13 @@
+// * mongoose schema
+// Not to be confused with graphQl schema, this is the DB-level one. It's equivalent to RoR schema
+// GraphQl schema is where instance and class-level methods are defined, and it's equivalent to RoR model
+// To confuse the hell out of me, the RoR schema-equivalent is in a folder named 'models',
+// and the RoR model-equivalent is in a folder named 'schema'
+// Anyway:
+// - 'schema' folder has the pure-graphql schema that's exposed to the client / graphiql / playground
+// - 'resolvers' is the layer b/w the pure-graphql schema and the implementation (mongoose, in my case)
+// - 'models' is the mongoose implementation
+
 // Each of the model methods can respond to its caller in either of 3 ways:
 // - returning string result / error (or: Promise.reject/resolve if async) - when called from other methods
 // - returning a mongoose query, which is a promise (Apollo will await it to resolve) - when called from resolvers
@@ -6,6 +16,8 @@
 import mongoose from 'mongoose'
 import { currencySchema } from './common'
 import { specified } from '../resolvers/utility'
+import { interbank } from './trading'
+import moize from 'moize'
 
 // TODO: remove _id declarations
 export const quotationSchema = new mongoose.Schema({
@@ -48,27 +60,79 @@ merchantSchema.virtual('delivers').get(function() {
 // - function in the resolver
 // - instance method in the model, like here (implemented by mongoose)
 // - key in the object model (populated by mongoose with the DB value)
-merchantSchema.methods.quotation = function({ currency }) {
-  const { quotations } = this
 
-  if (!quotations) return Promise.reject('merchant: no quotations at all')
-  const quotation = quotations.filter(item => item.currency === currency).pop()
-  if (!quotation)
-    // a simple error would actually be enough, as there's nothing async in this method
-    return Promise.reject(`merchant: No quotations for currency ${currency}`)
+// Important:
+// ! Arrow functions should not be used whenever I want access to 'this' (= merchant record)
 
-  return Promise.resolve(quotation)
+// * Caching of calculated fields
+// While there are libraries to cache DB-retrieved values
+// some calculated fields require caching too, which calls for using a pure function caching solution such as moize
+// This is the recipe to do it:
+
+// Being a merchantSchema.methods key (and not an arrow function), 'quotation' has access to the merchant record
+// It adds an 'id' argument to memoizedQuotation (to compare keys) and nonMemoizedQuotation (which is not interested but has to have it)
+// for the sheer purpose of caching quotation per merchant (id), base & quote
+
+// In real-life, merchant's quotations would be populated by a different process, certinaly not the web
+// But since here merchant's quotations are fabricated with each call (by upmarking a (cached) interbank rate)
+// and since both 'quote' and 'quotation' can be shown at the same time  and quote' calls 'quotation'
+// caching quotation becomes a necessity or else the two fields will not match
+
+merchantSchema.methods.quotation = async function({
+  product: { base, quote },
+}) {
+  const { id } = this
+  const result = await memoizedQuotation({ id, base, quote })
+  return result
 }
 
-merchantSchema.methods.quote = async function({ currency, amount }) {
+const nonMemoizedQuotation = async ({ id, base, quote }) => {
   try {
-    const quotation = await this.quotation({ currency })
-    const result = quotation.buy * amount
-    return result
+    const MARGIN_LOW = 3
+    const MARGIN_HIGH = 5
+    const random = Math.random()
+    const margin = (MARGIN_LOW + (MARGIN_HIGH - MARGIN_LOW) * random) / 100
+
+    const interbankRate = await interbank({ base, quote })
+    console.log('interbankRate: ', interbankRate)
+    const rate = interbankRate * (1 + margin)
+    const created = Date.now()
+
+    return { base, quote, rate, created }
   } catch (error) {
+    console.log('merchantSchema.methods.quotation error: ', error)
     return Promise.reject(error)
   }
 }
+
+// ! always call moize(fn) after fn is defined
+const memoizedQuotation = moize({
+  maxAge: 120000,
+  profileName: 'quotation',
+  equals(cacheKeyArgument, keyArgument) {
+    return (
+      cacheKeyArgument.id === keyArgument.id &&
+      cacheKeyArgument.base === keyArgument.base &&
+      cacheKeyArgument.quote === keyArgument.quote
+    )
+  },
+})(nonMemoizedQuotation)
+
+// 'quote' can now  safely call 'quotation', resting asured its value would be identical to that of 'quotation' itself
+merchantSchema.methods.quote = async function({ product, amount }) {
+  const { base, quote } = product
+  try {
+    const quotation = await this.quotation({ product })
+    const price = quotation.rate * amount
+    const created = Date.now()
+    return { base, quote, amount, price, created }
+  } catch (error) {
+    console.log('merchantSchema.methods.quote error: ', error)
+    return Promise.reject(error)
+  }
+}
+
+// ? Old
 
 merchantSchema.methods.updateQuotation = async function(newQuotation) {
   const { currency, buy, sell } = newQuotation
@@ -97,8 +161,12 @@ merchantSchema.statics.deliver = function() {
   return this.find({ delivery: true })
 }
 
-merchantSchema.statics.search = function(args) {
-  const { lat, lng, distance, delivery, currency, count } = args
+merchantSchema.statics.search = async function(args) {
+  console.log('in graphql/src/models/merchant.js merchant')
+  const { lat, lng, distance, delivery, count } = args
+
+  const latitude = lat || 32.0853
+  const longitude = lng || 34.781769
 
   // Not adding 'exec' or 'await' makes 'query' chainable (.selling, .where, .limit)
   let query = this.find({
@@ -106,12 +174,12 @@ merchantSchema.statics.search = function(args) {
       $nearSphere: {
         $geometry: {
           type: 'Point',
-          coordinates: [lng, lat],
+          coordinates: [longitude, latitude],
         },
         $maxDistance: distance * 1000,
       },
     },
-  }).selling(currency)
+  })
 
   // if (delivery)' alone could either mean: don't care, or alternatively: look for those that do not support delivery
   if (specified(delivery)) query = query.where({ delivery })

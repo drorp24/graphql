@@ -49,12 +49,13 @@ const server = new ApolloServer({
   },
 
   formatError: error => {
+    console.log('in formatError')
+    console.log('error: ', error)
     console.log(error.message)
     return error
   },
 
   formatResponse: response => {
-    // console.log(response)
     return response
   },
 })

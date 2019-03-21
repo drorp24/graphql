@@ -1,15 +1,19 @@
 // graphql-tools's mergeSchemas fails with "Can't find type String"
 // no stackoverflow or any other word about this. Hopeless.
+
+//TODO: Remove old, unused definitions
+
 import { gql } from 'apollo-server'
 
 export default gql`
   type Query {
     merchants(
-      area: Area!
-      currency: String!
-      services: Services!
+      product: Product!
+      amount: Float!
+      service: Service
+      area: Area
       results: Results
-    ): [Merchant!]
+    ): [Merchant]
     merchantsByName(name: String!, results: Results!): [Merchant!]
     trading(
       "Coins whose prices you want to know"
@@ -32,6 +36,30 @@ export default gql`
     tradingUpdated: Trading!
   }
 
+  input Product {
+    base: String!
+    quote: String!
+  }
+
+  input Service {
+    "Supports delivery"
+    delivery: Boolean
+  }
+
+  input Area {
+    "Search area center latitude"
+    lat: Float
+    "Search area center longitude"
+    lng: Float
+    "Search area maximum radius"
+    distance: Float
+  }
+
+  input Results {
+    "Maximum results to fetch"
+    count: Float
+  }
+
   type Merchant {
     id: ID!
     place_id: String
@@ -46,20 +74,31 @@ export default gql`
     currency: String
     quotations: [Quotation]
     location: Location
-    quotation(currency: String!): Quotation
-    quote(currency: String!, amount: Float!): Float
+    quotation(product: Product!): Quotation
+    quote(product: Product!, amount: Float!): Quote
   }
 
+  # custom scalar, defined in resolvers
+  scalar Date
+
   type Quotation {
-    id: ID!
-    currency: String!
-    buy: Float
-    sell: Float
+    base: String # using an input (e.g. 'Product') in a type isn't allowed
+    quote: String
+    rate: Float
+    created: Date
+  }
+
+  type Quote {
+    base: String
+    quote: String
+    amount: Float
+    price: Float
+    created: Date
   }
 
   input QuotationInput {
     currency: String!
-    buy: Float
+    # buy: Float
     sell: Float
   }
 
@@ -82,25 +121,6 @@ export default gql`
     success: Boolean!
     message: String!
     quotation: Quotation!
-  }
-
-  input Area {
-    "Search area center latitude"
-    lat: Float!
-    "Search area center longitude"
-    lng: Float!
-    "Search area maximum radius"
-    distance: Float!
-  }
-
-  input Services {
-    "Supports delivery"
-    delivery: Boolean
-  }
-
-  input Results {
-    "Maximum results to fetch"
-    count: Float
   }
 
   type Trading {

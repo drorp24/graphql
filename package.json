@@ -25,6 +25,7 @@
     "graphql-tools": "^4.0.3",
     "interval-promise": "^1.3.0",
     "lodash.merge": "^4.6.1",
+    "moize": "^5.4.2",
     "mongoose": "^5.4.17",
     "uuidv4": "^2.0.0"
   }
