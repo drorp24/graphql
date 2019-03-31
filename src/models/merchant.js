@@ -94,7 +94,6 @@ const nonMemoizedQuotation = async ({ id, base, quote }) => {
     const margin = (MARGIN_LOW + (MARGIN_HIGH - MARGIN_LOW) * random) / 100
 
     const interbankRate = await interbank({ base, quote })
-    console.log('interbankRate: ', interbankRate)
     const rate = interbankRate * (1 + margin)
     const created = Date.now()
 
@@ -161,69 +160,44 @@ merchantSchema.statics.deliver = function() {
   return this.find({ delivery: true })
 }
 
-merchantSchema.statics.search = async function(args) {
-  console.log('in graphql/src/models/merchant.js merchant')
-  const { lat, lng, distance, delivery, count } = args
+// query is chained according to args, hence no 'exec' or 'await'
+merchantSchema.statics.search = async function({
+  product: { base, quote },
+  amount,
+  service: { delivery },
+  area: { lat, lng, distance },
+  pagination: { sortKey, sortOrder, after, count },
+}) {
+  let query = after ? this.find({ _id: { $gt: after } }) : this.find()
 
-  const latitude = lat || 32.0853
-  const longitude = lng || 34.781769
-
-  // Not adding 'exec' or 'await' makes 'query' chainable (.selling, .where, .limit)
-  let query = this.find({
+  query = query.where({
     location: {
       $nearSphere: {
         $geometry: {
           type: 'Point',
-          coordinates: [longitude, latitude],
+          coordinates: [lng, lat],
         },
         $maxDistance: distance * 1000,
       },
     },
   })
 
-  // if (delivery)' alone could either mean: don't care, or alternatively: look for those that do not support delivery
+  // 'if (delivery)' alone could either mean: don't care, or alternatively: look for those that do not support delivery
   if (specified(delivery)) query = query.where({ delivery })
 
   if (specified(count)) query = query.limit(count)
 
-  return query
-}
-
-merchantSchema.statics.byName = function(args) {
-  const { name, results } = args
-  let query = this.find({ name: new RegExp(name, 'i') })
-  if (results) query = query.limit(results)
+  query = query.sort({ [sortKey]: sortOrder })
 
   return query
 }
 
-merchantSchema.statics.updateQuotationByName = async function(args) {
-  let { name, quotation } = args
-  let merchant = await this.byName({ name: name, results: 1 })
-  if (!merchant.length)
-    return {
-      success: false,
-      message: 'merchant: no such name',
-      quotation,
-    }
-
-  merchant = merchant[0]
-
-  try {
-    quotation = await merchant.updateQuotation(quotation)
-  } catch (error) {
-    return {
-      success: false,
-      message: error,
-      quotation,
-    }
-  }
-
-  return {
-    success: true,
-    message: 'ok',
-    quotation,
-  }
+merchantSchema.statics.lastKey = async function(sortKey, sortOrder) {
+  const order = sortOrder === 'ascending' ? 'descending' : 'ascending'
+  const lastRec = await this.find()
+    .sort({ [sortKey]: order })
+    .limit(1)
+  return lastRec.pop()[sortKey]
 }
 
 // query helpers

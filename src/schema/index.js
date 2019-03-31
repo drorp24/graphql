@@ -1,4 +1,6 @@
-// graphql-tools's mergeSchemas fails with "Can't find type String"
+// Originally there was a merchant.js schema and a trading.js schema
+// And this index.js was supposed to merge them into one
+// However graphql-tools's mergeSchemas fails with "Can't find type String" - so all schema are defined here
 // no stackoverflow or any other word about this. Hopeless.
 
 //TODO: Remove old, unused definitions
@@ -12,9 +14,8 @@ export default gql`
       amount: Float!
       service: Service
       area: Area
-      results: Results
-    ): [Merchant]
-    merchantsByName(name: String!, results: Results!): [Merchant!]
+      pagination: Pagination
+    ): MerchantsConnection!
     trading(
       "Coins whose prices you want to know"
       coins: [String!]!
@@ -55,9 +56,21 @@ export default gql`
     distance: Float
   }
 
-  input Results {
-    "Maximum results to fetch"
-    count: Float
+  input Pagination {
+    "Which field to sort by"
+    sortKey: String!
+    "Mark 1 for ascending, -1 for descending sort order"
+    sortOrder: SortOrder!
+    "How many results to fetch every time"
+    count: Float!
+    "Internal. Leave it null"
+    after: String
+  }
+
+  type MerchantsConnection {
+    cursor: String
+    hasMore: Boolean!
+    records: [Merchant]!
   }
 
   type Merchant {
@@ -150,5 +163,10 @@ export default gql`
 
   enum Timing {
     CURRENT
+  }
+
+  enum SortOrder {
+    ascending
+    descending
   }
 `

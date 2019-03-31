@@ -1,6 +1,5 @@
 // Enables changing the structure of the args objects exposed to the client w/o
 // having to change the model's methods
-import { flatten } from './utility'
 import pubsub from '../subscriptions/pubsub'
 import { QUOTATION_UPDATED } from '../subscriptions/events'
 // import { UserInputError } from 'apollo-server'
@@ -9,6 +8,40 @@ import { GraphQLScalarType } from 'graphql'
 import { Kind } from 'graphql/language'
 import { UserInputError } from 'apollo-server'
 
+// (bad) example demonstrating how to validate and propagate validation errors to the client
+const validateMerchantsArgs = args => {
+  const validationErrors = {}
+  const { lat, lng } = args
+  if (!lat || !lng) {
+    validationErrors.location = 'Missing'
+  }
+  return validationErrors
+}
+
+// for fetchPaginated to stay generic:
+// - every query using it should have a 'pagination: { sortKey, sortOrder }'
+// - every model implementation (e.g. 'Merchant') should have a 'lastKey' method
+const fetchPaginated = async (model, method, args) => {
+  const {
+    pagination: { sortKey, sortOrder },
+  } = args
+  let [cursor, hasMore] = [null, false]
+
+  const records = await model[method](args)
+
+  if (records.length) {
+    const last = records[records.length - 1]
+    cursor = last[sortKey]
+    const lastKey = await model.lastKey(sortKey, sortOrder)
+    hasMore = cursor !== lastKey
+  } else {
+    cursor = ''
+    hasMore = false
+  }
+
+  return [records, cursor, hasMore]
+}
+
 export default {
   Subscription: {
     quotationUpdated: {
@@ -16,22 +49,28 @@ export default {
       subscribe: () => pubsub.asyncIterator([QUOTATION_UPDATED]),
     },
   },
+
   Query: {
-    merchants: (parent, args, { mmodels }) => {
-      // Input / authentication / etc should be checked / thrown here rather than in the (mongoose) implementation
-      // This allows to output a custom error, but won't interfere with succesful resolvers to reach clients (or so documentation promises)
-      const { lat, lng } = args
-      const validationErrors = {}
-      if (!lat || !lng) {
-        // validationErrors.location = 'Missing'
+    merchants: async (_, args, { mmodels: { Merchant } }) => {
+      // Validation
+      const validationErrors = validateMerchantsArgs(args)
+      if (validationErrors.length > 0) {
+        throw new UserInputError('Bad args', { validationErrors })
       }
-      if (Object.keys(validationErrors).length > 0) {
-        throw new UserInputError('No location provided', { validationErrors })
+
+      // Pagination
+      const [records, cursor, hasMore] = await fetchPaginated(
+        Merchant,
+        'search',
+        args,
+      )
+
+      return {
+        records,
+        cursor,
+        hasMore,
       }
-      return mmodels.Merchant.search(flatten(args))
     },
-    merchantsByName: (parent, args, { mmodels }) =>
-      mmodels.Merchant.byName(flatten(args)),
   },
   // Merchant: {
   // GraphQL looks for:
