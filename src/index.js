@@ -25,11 +25,13 @@ const {
   SERVER_NOSSR_PORT,
 } = process.env
 
-const port = JSON.parse(REACT_APP_SERVER)
-  ? JSON.parse(REACT_APP_SSR)
-    ? SERVER_SSR_PORT
-    : SERVER_NOSSR_PORT
-  : NOSERVER_NOSSR_PORT
+// heroku doesnt allow port number to be assigned, providing a dynamic environment variable instead ($PORT)
+const port =
+  process.env.PORT || JSON.parse(REACT_APP_SERVER)
+    ? JSON.parse(REACT_APP_SSR)
+      ? SERVER_SSR_PORT
+      : SERVER_NOSSR_PORT
+    : NOSERVER_NOSSR_PORT
 
 console.log('graphql server port: ', port)
 
