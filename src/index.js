@@ -14,6 +14,25 @@ import connect from './connections/mlab'
 import test from './tests/merchant'
 import { startPolling } from './models/trading'
 
+console.log('graphql/index.js:')
+console.log('process.env.ENV_FILE:', process.env.ENV_FILE)
+
+const {
+  REACT_APP_SERVER,
+  REACT_APP_SSR,
+  NOSERVER_NOSSR_PORT,
+  SERVER_SSR_PORT,
+  SERVER_NOSSR_PORT,
+} = process.env
+
+const port = JSON.parse(REACT_APP_SERVER)
+  ? JSON.parse(REACT_APP_SSR)
+    ? SERVER_SSR_PORT
+    : SERVER_NOSSR_PORT
+  : NOSERVER_NOSSR_PORT
+
+console.log('graphql server port: ', port)
+
 connect().catch(error => console.error('🤢 mongoDB connection error:', error))
 
 // will be merged into models, so every <model> is accessible as models.<model>
@@ -60,7 +79,7 @@ const server = new ApolloServer({
   },
 })
 
-server.listen().then(({ url }) => {
+server.listen({ port }).then(({ url }) => {
   console.log(`🚀 Server ready at ${url}`)
 })
 
