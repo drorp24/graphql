@@ -122,7 +122,7 @@ apolloServer.applyMiddleware({ app })
 const httpServer = createServer(app)
 apolloServer.installSubscriptionHandlers(httpServer)
 
-httpServer.listen({ host, port }, () => {
+httpServer.listen({ /* host,  */ port }, () => {
   console.log(
     `🚀 Server ready at http://${host}:${PORT}${apolloServer.graphqlPath}`,
   )
