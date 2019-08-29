@@ -1,3 +1,5 @@
+import express from 'express'
+import { createServer } from 'http'
 import 'core-js/stable'
 import 'regenerator-runtime/runtime'
 import 'dotenv/config'
@@ -70,7 +72,10 @@ connect().catch(error => console.error('🤢 mongoDB connection error:', error))
 const mmodels = { Merchant }
 // const unifiedSchema = mergeSchemas({ schemas: [tradingSchema, merchantSchema] })
 const unifiedResolvers = merge(merchantResolvers, tradingResolvers)
-const server = new ApolloServer({
+
+const app = express()
+
+const apolloServer = new ApolloServer({
   typeDefs: manuallyStitchedSchema,
 
   resolvers: unifiedResolvers,
@@ -110,8 +115,20 @@ const server = new ApolloServer({
   },
 })
 
-server.listen({ host, port }).then(({ url }) => {
-  console.log(`🚀 Server ready at ${url}`)
+apolloServer.applyMiddleware({ app })
+
+const httpServer = createServer(app)
+apolloServer.installSubscriptionHandlers(httpServer)
+
+httpServer.listen({ host, port }).then(({ url }) => {
+  console.log(
+    `🚀 Server ready at http://${host}:${PORT}${apolloServer.graphqlPath}`,
+  )
+  console.log(
+    `🚀 Subscriptions ready at ws://${host}:${PORT}${
+      apolloServer.subscriptionsPath
+    }`,
+  )
 })
 
 // test()
