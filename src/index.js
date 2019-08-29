@@ -22,6 +22,7 @@ console.log('process.env.ENV_FILE:', process.env.ENV_FILE)
 const {
   REACT_APP_SERVER,
   REACT_APP_SSR,
+  GRAPHQL_DOMAIN,
   DEFAULT_GRAPHQL_PORT,
   NOSERVER_NOSSR_PORT,
   SERVER_SSR_PORT,
@@ -29,9 +30,10 @@ const {
 } = process.env
 
 console.log(
-  'REACT_APP_SERVER, REACT_APP_SSR, DEFAULT_GRAPHQL_PORT, NOSERVER_NOSSR_PORT, SERVER_SSR_PORT, SERVER_NOSSR_PORT: ',
+  'REACT_APP_SERVER, REACT_APP_SSR, GRAPHQL_DOMAIN, DEFAULT_GRAPHQL_PORT, NOSERVER_NOSSR_PORT, SERVER_SSR_PORT, SERVER_NOSSR_PORT: ',
   REACT_APP_SERVER,
   REACT_APP_SSR,
+  GRAPHQL_DOMAIN,
   DEFAULT_GRAPHQL_PORT,
   NOSERVER_NOSSR_PORT,
   SERVER_SSR_PORT,
@@ -50,6 +52,8 @@ console.log(
 // Furthermore, I would in such case have to pass the value of these variables to the client on a script tag
 // if DEFAULT_GRAPHQL_PORT has value, it means we're in a heroku environment and need only assign that value to the port.
 // (heroku also doesn't let you assign port numbers to web servers - see comment in index.js and indexNoSsr.js)
+const host = GRAPHQL_DOMAIN
+
 const port =
   DEFAULT_GRAPHQL_PORT ||
   (JSON.parse(REACT_APP_SERVER)
@@ -106,7 +110,7 @@ const server = new ApolloServer({
   },
 })
 
-server.listen({ port }).then(({ url }) => {
+server.listen({ host, port }).then(({ url }) => {
   console.log(`🚀 Server ready at ${url}`)
 })
 
