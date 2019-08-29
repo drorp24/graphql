@@ -55,7 +55,7 @@ console.log(
 const host = GRAPHQL_DOMAIN
 
 const port =
-  DEFAULT_GRAPHQL_PORT ||
+  process.env.PORT ||
   (JSON.parse(REACT_APP_SERVER)
     ? JSON.parse(REACT_APP_SSR)
       ? SERVER_SSR_PORT
