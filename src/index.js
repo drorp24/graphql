@@ -1,9 +1,11 @@
-import express from 'express'
-import { createServer } from 'http'
 import 'core-js/stable'
 import 'regenerator-runtime/runtime'
 import 'dotenv/config'
-import { ApolloServer } from 'apollo-server'
+
+import express from 'express'
+import { createServer } from 'http'
+import { ApolloServer } from 'apollo-server-express'
+
 import merge from 'lodash.merge'
 // import { mergeSchemas } from 'graphql-tools'
 
