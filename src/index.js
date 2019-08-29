@@ -1,3 +1,5 @@
+import 'core-js/stable'
+import 'regenerator-runtime/runtime'
 import 'dotenv/config'
 import { ApolloServer } from 'apollo-server'
 import merge from 'lodash.merge'
@@ -25,6 +27,16 @@ const {
   SERVER_SSR_PORT,
   SERVER_NOSSR_PORT,
 } = process.env
+
+console.log(
+  'REACT_APP_SERVER, REACT_APP_SSR, DEFAULT_GRAPHQL_PORT, NOSERVER_NOSSR_PORT, SERVER_SSR_PORT, SERVER_NOSSR_PORT: ',
+  REACT_APP_SERVER,
+  REACT_APP_SSR,
+  DEFAULT_GRAPHQL_PORT,
+  NOSERVER_NOSSR_PORT,
+  SERVER_SSR_PORT,
+  SERVER_NOSSR_PORT,
+)
 
 // in a local environment (only), each of the 3 web servers (CRA's HMR, server with ssr, server with no ssr) is assigned its own different port number.
 // That enables running locally a CRA server alongside a production-like server w/o having to kill processes with identical ports.
