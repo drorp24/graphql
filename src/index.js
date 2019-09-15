@@ -127,7 +127,7 @@ apolloServer.applyMiddleware({ app })
 const httpServer = createServer(app)
 apolloServer.installSubscriptionHandlers(httpServer)
 
-httpServer.listen({ host, port }, error => {
+httpServer.listen({ /* host, */ port }, error => {
   if (error) {
     console.log('httpServer error: ', error)
     return
