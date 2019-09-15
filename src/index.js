@@ -61,6 +61,7 @@ console.log(
 // if DEFAULT_GRAPHQL_PORT has value, it means we're in a heroku environment and need only assign that value to the port.
 // (heroku also doesn't let you assign port numbers to web servers - see comment in index.js and indexNoSsr.js)
 const host = `${REACT_APP_GRAPHQL_WEB_SCHEME}://${GRAPHQL_DOMAIN}`
+console.log('host: ', host)
 
 const port =
   process.env.PORT ||
@@ -126,7 +127,11 @@ apolloServer.applyMiddleware({ app })
 const httpServer = createServer(app)
 apolloServer.installSubscriptionHandlers(httpServer)
 
-httpServer.listen({ host, port }, () => {
+httpServer.listen({ host, port }, error => {
+  if (error) {
+    console.log('httpServer error: ', error)
+    return
+  }
   console.log(
     `🚀 Server ready at ${REACT_APP_GRAPHQL_WEB_SCHEME}://${host}:${port}${
       apolloServer.graphqlPath
