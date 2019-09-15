@@ -50,6 +50,9 @@ export default {
     },
   },
 
+  // ! merchants query does *not* sort records by quote
+  // see merchants/merchantSchema.statics.search
+
   Query: {
     merchants: async (_, args, { mmodels: { Merchant } }) => {
       // Validation

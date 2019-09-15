@@ -124,10 +124,12 @@ apolloServer.installSubscriptionHandlers(httpServer)
 
 httpServer.listen({ /* host,  */ port }, () => {
   console.log(
-    `🚀 Server ready at http://${host}:${port}${apolloServer.graphqlPath}`,
+    `🚀 Server ready at ${REACT_APP_GRAPHQL_WEB_SCHEME}://${host}:${port}${
+      apolloServer.graphqlPath
+    }`,
   )
   console.log(
-    `🚀 Subscriptions ready at ws://${host}:${port}${
+    `🚀 Subscriptions ready at ${REACT_APP_GRAPHQL_WEBSOCKET_SCHEME}://${host}:${port}${
       apolloServer.subscriptionsPath
     }`,
   )

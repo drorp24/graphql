@@ -160,6 +160,11 @@ merchantSchema.statics.deliver = function() {
   return this.find({ delivery: true })
 }
 
+// ! merchants query does *not* sort records by quote
+// quote (price) isn't in the DB, so 'search' here cannot sort by it
+// it's a calculated field, added to the results array when ready by merchantSchema.methods.quote above
+// mongoose may have a way to sort by a calculated field but I'd rather not deal with it now
+
 // query is chained according to args, hence no 'exec' or 'await'
 merchantSchema.statics.search = async function({
   product: { base, quote },
