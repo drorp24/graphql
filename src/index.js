@@ -132,13 +132,9 @@ httpServer.listen({ /* host, */ port }, error => {
     console.log('httpServer error: ', error)
     return
   }
+  console.log(`🚀 Server ready at ${host}:${port}${apolloServer.graphqlPath}`)
   console.log(
-    `🚀 Server ready at ${REACT_APP_GRAPHQL_WEB_SCHEME}://${host}:${port}${
-      apolloServer.graphqlPath
-    }`,
-  )
-  console.log(
-    `🚀 Subscriptions ready at ${REACT_APP_GRAPHQL_WEBSOCKET_SCHEME}://${host}:${port}${
+    `🚀 Subscriptions ready at ${host}:${port}${
       apolloServer.subscriptionsPath
     }`,
   )
