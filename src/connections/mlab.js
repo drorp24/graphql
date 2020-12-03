@@ -13,7 +13,6 @@ const {
 } = process.env
 const OPTIONS = DB_OPTIONS ? `?${DB_OPTIONS}` : ''
 const MLAB_CONNECT = `${DB_SCHEME}://${DB_USER}:${DB_PASSWORD}@${DB_HOST}/${DB_CLUSTER}${OPTIONS}`
-console.log('MLAB_CONNECT: ', MLAB_CONNECT)
 
 export default async () => {
   await mongoose.connect(
@@ -27,6 +26,7 @@ export default async () => {
     },
   )
   console.log('🧨  mongoDB successfully connected')
+  console.log('MLAB_CONNECT: ', MLAB_CONNECT)
 
   //Bind connection to error event (to get notification of connection errors)
   mongoose.connection.on(
