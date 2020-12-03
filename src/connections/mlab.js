@@ -1,8 +1,18 @@
 import mongoose from 'mongoose'
 
-const MLAB_CONNECT = `mongodb://${process.env.DB_USER}:${
-  process.env.DB_PASSWORD
-}@${process.env.DB_URL}`
+// The following characters should not be part of the .env variables themselves
+// or else they should be escape encoded. That's why such chars are here not there.
+// : / ? # [ ] @
+const {
+  DB_SCHEME,
+  DB_USER,
+  DB_PASSWORD,
+  DB_HOST,
+  DB_CLUSTER,
+  DB_OPTIONS,
+} = process.env
+const OPTIONS = DB_OPTIONS ? `?${DB_OPTIONS}` : ''
+const MLAB_CONNECT = `${DB_SCHEME}://${DB_USER}:${DB_PASSWORD}@${DB_HOST}/${DB_CLUSTER}${OPTIONS}`
 
 export default async () => {
   await mongoose.connect(
